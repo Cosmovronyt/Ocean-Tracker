@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title></title>
+	<meta name="generator" content="LibreOffice 26.8.0.3 (Linux)"/>
+	<meta name="created" content="00:00:00"/>
+	<meta name="changed" content="00:00:00"/>
+	<style type="text/css">
+		@page { size: 8.27in 11.69in; margin: 0.79in }
+		p { margin-bottom: 0.1in; line-height: 115%; background: transparent }
+		pre { font-size: 10pt; font-family: "Liberation Mono", monospace; background: transparent }
+	</style>
+</head>
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><pre>&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot; /&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot; /&gt;
+  &lt;title&gt;OceanPulse | Global Wildlife Tracker&lt;/title&gt;
+  
+  &lt;!-- Leaflet Map CSS --&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;https://unpkg.com/leaflet@1.9.4/dist/leaflet.css&quot; /&gt;
+  
+  &lt;style&gt;
+    :root {
+      --bg: #07131f;
+      --card: #0f2336;
+      --accent: #00d4ff;
+      --text: #f0f6fc;
+      --muted: #8b9eb0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* LOCK SCREEN STYLES */
+    #lock-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .nfc-pulse {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(0, 212, 255, 0.15);
+      border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; margin-bottom: 1.5rem;
+      box-shadow: 0 0 25px rgba(0, 212, 255, 0.3);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.5); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(0, 212, 255, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
+    }
+    #lock-screen h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    #lock-screen p { color: var(--muted); max-width: 320px; line-height: 1.5; }
+
+    /* MAIN APP STYLES */
+    #tracker-app { display: none; max-width: 500px; width: 100%; margin: 0 auto; padding: 1.25rem; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .badge { background: rgba(0, 212, 255, 0.15); color: var(--accent); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; }
+
+    .profile-card {
+      background: var(--card); border-radius: 18px; padding: 1.25rem;
+      border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;
+    }
+    .profile-top { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+    .avatar {
+      width: 68px; height: 68px; border-radius: 14px; object-fit: cover;
+      background: #173652; border: 2px solid var(--accent);
+    }
+    .animal-name { font-size: 1.4rem; font-weight: 800; }
+    .species { color: var(--accent); font-size: 0.85rem; font-weight: 600; }
+    .tag-id-label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center; margin-bottom: 1rem; }
+    .stat-box { background: rgba(0,0,0,0.25); padding: 0.65rem; border-radius: 10px; }
+    .stat-val { font-weight: 700; font-size: 0.95rem; }
+    .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+    /* DATABASE BROWSER SELECTOR */
+    .selector-box {
+      background: var(--card); border-radius: 14px; padding: 0.75rem 1rem;
+      border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .selector-box label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    select {
+      background: #173652; color: var(--text); border: 1px solid rgba(255,255,255,0.15);
+      padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; outline: none;
+    }
+
+    #map { height: 260px; width: 100%; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem; z-index: 1; }
+
+    .log-card { background: var(--card); border-radius: 18px; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.08); }
+    .log-card h3 { font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--muted); }
+    .ping-item { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; }
+    .ping-item:last-child { border-bottom: none; }
+    .ping-date { color: var(--accent); font-weight: 600; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+  &lt;!-- LOCKED VIEW (Shown if no physical tag was ever tapped) --&gt;
+  &lt;div id=&quot;lock-screen&quot;&gt;
+    &lt;div class=&quot;nfc-pulse&quot;&gt;ð¡&lt;/div&gt;
+    &lt;h1&gt;Physical Tag Required&lt;/h1&gt;
+    &lt;p&gt;Hold your phone against your physical tag to unlock full access to the live tracking database.&lt;/p&gt;
+  &lt;/div&gt;
+
+  &lt;!-- MAIN DATABASE DASHBOARD --&gt;
+  &lt;div id=&quot;tracker-app&quot;&gt;
+    &lt;div class=&quot;header&quot;&gt;
+      &lt;span style=&quot;font-weight: 800; letter-spacing: 0.5px;&quot;&gt;OCEAN&lt;span style=&quot;color:var(--accent)&quot;&gt;PULSE&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;badge&quot;&gt;â VIP PASS UNLOCKED&lt;/span&gt;
+    &lt;/div&gt;
+
+    &lt;!-- DATABASE BROWSER DROPDOWN --&gt;
+    &lt;div class=&quot;selector-box&quot;&gt;
+      &lt;label for=&quot;animal-select&quot;&gt;BROWSE DATABASE:&lt;/label&gt;
+      &lt;select id=&quot;animal-select&quot; onchange=&quot;switchAnimal(this.value)&quot;&gt;
+        &lt;!-- Populated dynamically via JS --&gt;
+      &lt;/select&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;profile-card&quot;&gt;
+      &lt;div class=&quot;profile-top&quot;&gt;
+        &lt;img id=&quot;animal-img&quot; class=&quot;avatar&quot; src=&quot;&quot; alt=&quot;Animal&quot; /&gt;
+        &lt;div&gt;
+          &lt;div class=&quot;animal-name&quot; id=&quot;animal-name&quot;&gt;Loading...&lt;/div&gt;
+          &lt;div class=&quot;species&quot; id=&quot;animal-species&quot;&gt;...&lt;/div&gt;
+          &lt;div class=&quot;tag-id-label&quot; id=&quot;animal-tag-code&quot;&gt;BEACON #000&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;stats-grid&quot;&gt;
+        &lt;div class=&quot;stat-box&quot;&gt;
+          &lt;div class=&quot;stat-val&quot; id=&quot;stat-length&quot;&gt;--&lt;/div&gt;
+          &lt;div class=&quot;stat-label&quot;&gt;Length&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;stat-box&quot;&gt;
+          &lt;div class=&quot;stat-val&quot; id=&quot;stat-weight&quot;&gt;--&lt;/div&gt;
+          &lt;div class=&quot;stat-label&quot;&gt;Weight&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;stat-box&quot;&gt;
+          &lt;div class=&quot;stat-val&quot; id=&quot;stat-dist&quot;&gt;--&lt;/div&gt;
+          &lt;div class=&quot;stat-label&quot;&gt;Tracked&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div id=&quot;map&quot;&gt;&lt;/div&gt;
+
+    &lt;div class=&quot;log-card&quot;&gt;
+      &lt;h3&gt;RECENT SATELLITE PINGS&lt;/h3&gt;
+      &lt;div id=&quot;ping-list&quot;&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;!-- Leaflet Map JS --&gt;
+  &lt;script src=&quot;https://unpkg.com/leaflet@1.9.4/dist/leaflet.js&quot;&gt;&lt;/script&gt;
+
+  &lt;script&gt;
+    const TOTAL_ANIMALS = 200;
+    const VIP_SECRET_KEY = &quot;ocean-vip-2026&quot;; // The magic code encoded on all your tags
+
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t &gt;&gt;&gt; 15, t | 1);
+        t ^= t + Math.imul(t ^ t &gt;&gt;&gt; 7, t | 61);
+        return ((t ^ t &gt;&gt;&gt; 14) &gt;&gt;&gt; 0) / 4294967296;
+      };
+    }
+
+    const NAMES = [
+      &quot;Finn&quot;, &quot;Mako&quot;, &quot;Atlas&quot;, &quot;Nova&quot;, &quot;Kai&quot;, &quot;Luna&quot;, &quot;Echo&quot;, &quot;Orion&quot;, &quot;Nemo&quot;, &quot;Riptide&quot;,
+      &quot;Shadow&quot;, &quot;Azure&quot;, &quot;Coral&quot;, &quot;Drift&quot;, &quot;Zephyr&quot;, &quot;Titan&quot;, &quot;Surge&quot;, &quot;Blue&quot;, &quot;Calypso&quot;, &quot;Storm&quot;,
+      &quot;Poseidon&quot;, &quot;Marlin&quot;, &quot;Pearl&quot;, &quot;Koda&quot;, &quot;Tide&quot;, &quot;Vortex&quot;, &quot;Siren&quot;, &quot;Ghost&quot;, &quot;Aries&quot;, &quot;Baja&quot;,
+      &quot;Pacific&quot;, &quot;Reef&quot;, &quot;Swell&quot;, &quot;Current&quot;, &quot;Manta&quot;, &quot;Dune&quot;, &quot;Cobalt&quot;, &quot;Nautilus&quot;, &quot;Onyx&quot;, &quot;Vega&quot;
+    ];
+
+    const SPECIES_LIST = [
+      { type: &quot;Great White Shark&quot;, image: &quot;https://images.unsplash.com/photo-1560275619-4662e36fa65c?auto=format&amp;fit=crop&amp;w=200&amp;q=80&quot;, minLen: 11.5, maxLen: 16.5, minWt: 1200, maxWt: 2400 },
+      { type: &quot;Tiger Shark&quot;, image: &quot;https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&amp;fit=crop&amp;w=200&amp;q=80&quot;, minLen: 10.0, maxLen: 14.5, minWt: 850, maxWt: 1400 },
+      { type: &quot;Hammerhead Shark&quot;, image: &quot;https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&amp;fit=crop&amp;w=200&amp;q=80&quot;, minLen: 9.5, maxLen: 13.5, minWt: 500, maxWt: 950 },
+      { type: &quot;Whale Shark&quot;, image: &quot;https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&amp;fit=crop&amp;w=200&amp;q=80&quot;, minLen: 22.0, maxLen: 34.0, minWt: 18000, maxWt: 32000 }
+    ];
+
+    const OCEAN_ZONES = [
+      { name: &quot;Southern California Bight&quot;, lat: 32.8, lon: -118.6, latSpan: 1.8, lonSpan: 1.5 },
+      { name: &quot;Baja Offshore Corridor&quot;, lat: 27.5, lon: -116.2, latSpan: 2.5, lonSpan: 1.8 },
+      { name: &quot;Hawaiian Archipelago&quot;, lat: 20.8, lon: -157.5, latSpan: 1.8, lonSpan: 2.2 },
+      { name: &quot;Florida Atlantic Shelf&quot;, lat: 26.8, lon: -79.2, latSpan: 2.4, lonSpan: 1.0 },
+      { name: &quot;Gulf Stream Current&quot;, lat: 31.5, lon: -77.5, latSpan: 2.5, lonSpan: 1.5 },
+      { name: &quot;GalÃ¡pagos Marine Reserve&quot;, lat: -0.8, lon: -91.2, latSpan: 1.5, lonSpan: 1.8 },
+      { name: &quot;Coral Sea Basin&quot;, lat: -16.5, lon: 148.5, latSpan: 2.5, lonSpan: 2.0 },
+      { name: &quot;Azores North Atlantic&quot;, lat: 38.2, lon: -28.5, latSpan: 2.0, lonSpan: 2.5 }
+    ];
+
+    function buildSimulatedAnimal(id) {
+      const rand = mulberry32(id * 9973);
+      const baseName = NAMES[Math.floor(rand() * NAMES.length)];
+      const suffix = id &gt; NAMES.length ? ` ${[&quot;II&quot;, &quot;III&quot;, &quot;Jr.&quot;, &quot;Prime&quot;, &quot;X&quot;][id % 5]}` : &quot;&quot;;
+      const species = SPECIES_LIST[Math.floor(rand() * SPECIES_LIST.length)];
+      const zone = OCEAN_ZONES[Math.floor(rand() * OCEAN_ZONES.length)];
+
+      const length = (species.minLen + rand() * (species.maxLen - species.minLen)).toFixed(1) + &quot; ft&quot;;
+      const weight = Math.round(species.minWt + rand() * (species.maxWt - species.minWt)).toLocaleString() + &quot; lbs&quot;;
+
+      const now = new Date();
+      const dayEpoch = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
+      const baseDist = Math.floor(400 + rand() * 1200) + (dayEpoch % 365) * 4;
+
+      const route = [];
+      for (let i = 0; i &lt; 6; i++) {
+        const pingDay = dayEpoch - i;
+        const pingDateObj = new Date(now.getTime() - i * 86400000);
+        const dateStr = pingDateObj.toLocaleDateString(&quot;en-US&quot;, { month: &quot;short&quot;, day: &quot;numeric&quot; });
+
+        const phase = (pingDay * 0.28) + (id * 1.7);
+        const lat = +(zone.lat + Math.sin(phase) * zone.latSpan + Math.cos(phase * 0.5) * 0.4).toFixed(4);
+        const lon = +(zone.lon + Math.cos(phase * 0.85) * zone.lonSpan + Math.sin(phase * 0.4) * 0.4).toFixed(4);
+
+        const latDir = lat &gt;= 0 ? &quot;N&quot; : &quot;S&quot;;
+        const lonDir = lon &gt;= 0 ? &quot;E&quot; : &quot;W&quot;;
+        const coordLabel = `${zone.name} (${Math.abs(lat).toFixed(2)}Â°${latDir}, ${Math.abs(lon).toFixed(2)}Â°${lonDir})`;
+
+        route.push({
+          date: i === 0 ? &quot;Today (Live)&quot; : dateStr,
+          loc: coordLabel,
+          coords: [lat, lon]
+        });
+      }
+
+      return {
+        id,
+        name: baseName + suffix,
+        species: species.type,
+        image: species.image,
+        length,
+        weight,
+        distance: baseDist.toLocaleString() + &quot; mi&quot;,
+        route
+      };
+    }
+
+    // Access Validation &amp; Redirection Logic
+    const params = new URLSearchParams(window.location.search);
+    const urlKey = params.get(&quot;key&quot;);
+    const STORAGE_KEY = &quot;oceanpulse_vip_access&quot;;
+    let isUnlocked = false;
+
+    if (urlKey === VIP_SECRET_KEY) {
+      // User tapped a physical tag! Unlock access in local storage and clean address bar
+      localStorage.setItem(STORAGE_KEY, &quot;true&quot;);
+      window.location.href = window.location.origin + window.location.pathname;
+    } else {
+      // Check if this browser was previously unlocked by a physical tag tap
+      if (localStorage.getItem(STORAGE_KEY) === &quot;true&quot;) {
+        isUnlocked = true;
+      }
+    }
+
+    let currentMap = null;
+
+    if (!isUnlocked) {
+      document.getElementById(&quot;lock-screen&quot;).style.display = &quot;flex&quot;;
+    } else {
+      document.getElementById(&quot;tracker-app&quot;).style.display = &quot;block&quot;;
+      populateDropdown();
+      loadAnimal(1); // Default to Animal #1 on load
+    }
+
+    function populateDropdown() {
+      const select = document.getElementById(&quot;animal-select&quot;);
+      for (let i = 1; i &lt;= TOTAL_ANIMALS; i++) {
+        const animal = buildSimulatedAnimal(i);
+        const opt = document.createElement(&quot;option&quot;);
+        opt.value = i;
+        opt.textContent = `#${String(i).padStart(3, &quot;0&quot;)} - ${animal.name} (${animal.species})`;
+        select.appendChild(opt);
+      }
+    }
+
+    function switchAnimal(id) {
+      loadAnimal(parseInt(id, 10));
+    }
+
+    function loadAnimal(id) {
+      const animal = buildSimulatedAnimal(id);
+
+      document.getElementById(&quot;animal-name&quot;).textContent = animal.name;
+      document.getElementById(&quot;animal-species&quot;).textContent = animal.species;
+      document.getElementById(&quot;animal-tag-code&quot;).textContent = `DATABASE ENTRY #${String(animal.id).padStart(3, &quot;0&quot;)}`;
+      document.getElementById(&quot;animal-img&quot;).src = animal.image;
+      document.getElementById(&quot;stat-length&quot;).textContent = animal.length;
+      document.getElementById(&quot;stat-weight&quot;).textContent = animal.weight;
+      document.getElementById(&quot;stat-dist&quot;).textContent = animal.distance;
+
+      // Render Pings
+      const pingList = document.getElementById(&quot;ping-list&quot;);
+      pingList.innerHTML = &quot;&quot;;
+      animal.route.forEach((ping, index) =&gt; {
+        const div = document.createElement(&quot;div&quot;);
+        div.className = &quot;ping-item&quot;;
+        div.innerHTML = `&lt;span&gt;${index === 0 ? &quot;ð &quot; : &quot;&quot;}${ping.loc}&lt;/span&gt;&lt;span class=&quot;ping-date&quot;&gt;${ping.date}&lt;/span&gt;`;
+        pingList.appendChild(div);
+      });
+
+      // Render/Update Leaflet Map
+      const latestCoords = animal.route[0].coords;
+      if (!currentMap) {
+        currentMap = L.map(&quot;map&quot;, { zoomControl: false }).setView(latestCoords, 6);
+        L.tileLayer(&quot;https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png&quot;, {
+          attribution: &quot;&amp;copy; OpenStreetMap&quot;
+        }).addTo(currentMap);
+      } else {
+        currentMap.setView(latestCoords, 6);
+        // Clear previous layers
+        currentMap.eachLayer(layer =&gt; {
+          if (layer instanceof L.Polyline || layer instanceof L.CircleMarker) {
+            currentMap.removeLayer(layer);
+          }
+        });
+      }
+
+      const latlngs = animal.route.map(p =&gt; p.coords);
+      L.polyline(latlngs, { color: &quot;#00d4ff&quot;, weight: 3, dashArray: &quot;6, 8&quot; }).addTo(currentMap);
+
+      animal.route.forEach((ping, index) =&gt; {
+        const marker = L.circleMarker(ping.coords, {
+          radius: index === 0 ? 8 : 5,
+          fillColor: index === 0 ? &quot;#00d4ff&quot; : &quot;#ffffff&quot;,
+          color: &quot;#07131f&quot;,
+          weight: 2,
+          fillOpacity: 1
+        }).addTo(currentMap);
+        marker.bindPopup(`&lt;b&gt;${ping.date}&lt;/b&gt;&lt;br&gt;${ping.loc}`);
+      });
+    }
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</body>
+</html>
