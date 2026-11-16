@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>OceanPulse | Global Wildlife Tracker</title>
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    :root {
+      --bg: #07131f;
+      --card: #0f2336;
+      --accent: #00d4ff;
+      --text: #f0f6fc;
+      --muted: #8b9eb0;
+      --live: #00ff88;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* LOCK SCREEN STYLES */
+    #lock-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .nfc-pulse {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(0, 212, 255, 0.15);
+      border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; margin-bottom: 1.5rem;
+      box-shadow: 0 0 25px rgba(0, 212, 255, 0.3);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.5); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(0, 212, 255, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
+    }
+    #lock-screen h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    #lock-screen p { color: var(--muted); max-width: 320px; line-height: 1.5; }
+
+    /* MAIN APP STYLES */
+    #tracker-app { display: none; max-width: 500px; width: 100%; margin: 0 auto; padding: 1.25rem; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .badge { background: rgba(0, 212, 255, 0.15); color: var(--accent); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px; }
+    .live-dot { width: 8px; height: 8px; background: var(--live); border-radius: 50%; animation: blink 1.5s infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+    .profile-card {
+      background: var(--card); border-radius: 18px; padding: 1.25rem;
+      border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;
+    }
+    .profile-top { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+    .avatar {
+      width: 68px; height: 68px; border-radius: 14px; object-fit: cover;
+      background: #173652; border: 2px solid var(--accent);
+    }
+    .animal-name { font-size: 1.4rem; font-weight: 800; }
+    .species { color: var(--accent); font-size: 0.85rem; font-weight: 600; }
+    .tag-id-label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center; margin-bottom: 1rem; }
+    .stat-box { background: rgba(0,0,0,0.25); padding: 0.65rem; border-radius: 10px; }
+    .stat-val { font-weight: 700; font-size: 0.95rem; }
+    .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+    /* SEARCH / LOOKUP CONTROLS */
+    .search-box {
+      background: var(--card); border-radius: 14px; padding: 0.75rem 1rem;
+      border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;
+      display: flex; gap: 0.5rem; align-items: center;
+    }
+    .search-box input {
+      flex: 1; background: #173652; color: var(--text); border: 1px solid rgba(255,255,255,0.15);
+      padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; outline: none;
+    }
+    .search-box input::placeholder { color: var(--muted); }
+    .rand-btn {
+      background: var(--accent); color: var(--bg); border: none; font-weight: 700;
+      padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;
+    }
+
+    #map { height: 260px; width: 100%; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem; z-index: 1; background: #07131f; }
+
+    .log-card { background: var(--card); border-radius: 18px; padding: 1.25rem; border: 1px solid rgba(255,255,255,0.08); }
+    .log-card h3 { font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--muted); }
+    .ping-item { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; }
+    .ping-item:last-child { border-bottom: none; }
+    .ping-date { color: var(--accent); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <!-- LOCKED VIEW -->
+  <div id="lock-screen">
+    <div class="nfc-pulse">📡</div>
+    <h1>Physical Tag Required</h1>
+    <p>Hold your phone against your physical tag to unlock full access to live telemetry tracking.</p>
+  </div>
+
+  <!-- MAIN DATABASE DASHBOARD -->
+  <div id="tracker-app">
+    <div class="header">
+      <span style="font-weight: 800; letter-spacing: 0.5px;">OCEAN<span style="color:var(--accent)">PULSE</span></span>
+      <span class="badge"><span class="live-dot"></span> LIVE TRACKING ACTIVE</span>
+    </div>
+
+    <!-- INFINITE DATABASE SEARCH / LOOKUP -->
+    <div class="search-box">
+      <input type="number" id="animal-id-input" min="1" max="10000" placeholder="Enter ID # (e.g. 42)" onkeydown="if(event.key==='Enter') lookupAnimal()" />
+      <button class="rand-btn" onclick="lookupAnimal()">Go</button>
+      <button class="rand-btn" onclick="loadRandomAnimal()">🎲 Random</button>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-top">
+        <img id="animal-img" class="avatar" src="" alt="Animal" />
+        <div>
+          <div class="animal-name" id="animal-name">Loading...</div>
+          <div class="species" id="animal-species">...</div>
+          <div class="tag-id-label" id="animal-tag-code">BEACON #000</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="stat-length">--</div>
+          <div class="stat-label">Length</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-weight">--</div>
+          <div class="stat-label">Weight</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="stat-dist">--</div>
+          <div class="stat-label">Tracked</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="log-card">
+      <h3>REAL-TIME SATELLITE PINGS</h3>
+      <div id="ping-list"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const MAX_ANIMALS = 10000; 
+    const VIP_SECRET_KEY = "ocean-vip-2026";
+    const STORAGE_KEY = "oceanpulse_vip_access";
+    const BASEMAP_API_KEY = "cb1_59wk_1_c11eea0aa63f5f6dce13dd09";
+
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    const NAMES = [
+      "Finn", "Mako", "Atlas", "Nova", "Kai", "Luna", "Echo", "Orion", "Nemo", "Riptide",
+      "Shadow", "Azure", "Coral", "Drift", "Zephyr", "Titan", "Surge", "Blue", "Calypso", "Storm",
+      "Poseidon", "Marlin", "Pearl", "Koda", "Tide", "Vortex", "Siren", "Ghost", "Aries", "Baja",
+      "Pacific", "Reef", "Swell", "Current", "Manta", "Dune", "Cobalt", "Nautilus", "Onyx", "Vega"
+    ];
+
+    const SPECIES_LIST = [
+      { type: "Great White Shark", image: "https://images.unsplash.com/photo-1560275619-4662e36fa65c?auto=format&fit=crop&w=200&q=80", minLen: 11.5, maxLen: 16.5, minWt: 1200, maxWt: 2400 },
+      { type: "Tiger Shark", image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=200&q=80", minLen: 10.0, maxLen: 14.5, minWt: 850, maxWt: 1400 },
+      { type: "Hammerhead Shark", image: "https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=200&q=80", minLen: 9.5, maxLen: 13.5, minWt: 500, maxWt: 950 },
+      { type: "Whale Shark", image: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=200&q=80", minLen: 22.0, maxLen: 34.0, minWt: 18000, maxWt: 32000 }
+    ];
+
+    const OCEAN_ZONES = [
+      { name: "Southern California Bight", lat: 32.8, lon: -118.6, latSpan: 1.8, lonSpan: 1.5 },
+      { name: "Baja Offshore Corridor", lat: 27.5, lon: -116.2, latSpan: 2.5, lonSpan: 1.8 },
+      { name: "Hawaiian Archipelago", lat: 20.8, lon: -157.5, latSpan: 1.8, lonSpan: 2.2 },
+      { name: "Florida Atlantic Shelf", lat: 26.8, lon: -79.2, latSpan: 2.4, lonSpan: 1.0 },
+      { name: "Gulf Stream Current", lat: 31.5, lon: -77.5, latSpan: 2.5, lonSpan: 1.5 },
+      { name: "Galápagos Marine Reserve", lat: -0.8, lon: -91.2, latSpan: 1.5, lonSpan: 1.8 },
+      { name: "Coral Sea Basin", lat: -16.5, lon: 148.5, latSpan: 2.5, lonSpan: 2.0 },
+      { name: "Azores North Atlantic", lat: 38.2, lon: -28.5, latSpan: 2.0, lonSpan: 2.5 }
+    ];
+
+    function buildAnimal(id) {
+      const rand = mulberry32(id * 9973);
+      const baseName = NAMES[Math.floor(rand() * NAMES.length)];
+      const suffix = id > NAMES.length ? ` #${id % 999}` : "";
+      const species = SPECIES_LIST[Math.floor(rand() * SPECIES_LIST.length)];
+      const zone = OCEAN_ZONES[Math.floor(rand() * OCEAN_ZONES.length)];
+
+      const length = (species.minLen + rand() * (species.maxLen - species.minLen)).toFixed(1) + " ft";
+      const weight = Math.round(species.minWt + rand() * (species.maxWt - species.minWt)).toLocaleString() + " lbs";
+
+      const now = new Date();
+      const dayEpoch = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
+      const baseDist = Math.floor(400 + rand() * 1200) + (dayEpoch % 365) * 4;
+
+      const route = [];
+      for (let i = 0; i < 6; i++) {
+        const pingDay = dayEpoch - i;
+        const pingDateObj = new Date(now.getTime() - i * 86400000);
+        const dateStr = pingDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+        const phase = (pingDay * 0.28) + (id * 1.7);
+        const lat = +(zone.lat + Math.sin(phase) * zone.latSpan + Math.cos(phase * 0.5) * 0.4).toFixed(4);
+        const lon = +(zone.lon + Math.cos(phase * 0.85) * zone.lonSpan + Math.sin(phase * 0.4) * 0.4).toFixed(4);
+
+        const latDir = lat >= 0 ? "N" : "S";
+        const lonDir = lon >= 0 ? "E" : "W";
+        const coordLabel = `${zone.name} (${Math.abs(lat).toFixed(2)}°${latDir}, ${Math.abs(lon).toFixed(2)}°${lonDir})`;
+
+        route.push({
+          date: i === 0 ? "Today (Live)" : dateStr,
+          loc: coordLabel,
+          coords: [lat, lon]
+        });
+      }
+
+      return {
+        id,
+        name: baseName + suffix,
+        species: species.type,
+        image: species.image,
+        length,
+        weight,
+        distance: baseDist.toLocaleString() + " mi",
+        zone,
+        route
+      };
+    }
+
+    function setStorage(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+    function getStorage(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const urlKey = params.get("key");
+    let isUnlocked = false;
+    const isSandboxed = window.location.protocol === "about:" || window.location.protocol === "data:" || window.location.protocol === "blob:";
+
+    if (urlKey === VIP_SECRET_KEY) {
+      setStorage(STORAGE_KEY, "true");
+      isUnlocked = true;
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (e) {}
+    } else if (getStorage(STORAGE_KEY) === "true" || isSandboxed) {
+      isUnlocked = true;
+    }
+
+    let currentMap = null;
+    let liveMarker = null;
+    let livePolyline = null;
+    let currentAnimal = null;
+    let liveTimer = null;
+
+    if (!isUnlocked) {
+      document.getElementById("lock-screen").style.display = "flex";
+    } else {
+      document.getElementById("tracker-app").style.display = "block";
+      loadAnimal(1);
+    }
+
+    function lookupAnimal() {
+      const inputVal = parseInt(document.getElementById("animal-id-input").value, 10);
+      if (inputVal >= 1 && inputVal <= MAX_ANIMALS) {
+        loadAnimal(inputVal);
+      } else {
+      }
+    }
+
+    function loadRandomAnimal() {
+      const randomId = Math.floor(Math.random() * MAX_ANIMALS) + 1;
+      document.getElementById("animal-id-input").value = randomId;
+      loadAnimal(randomId);
+    }
+
+    function loadAnimal(id) {
+      if (liveTimer) clearInterval(liveTimer);
+      currentAnimal = buildAnimal(id);
+
+      document.getElementById("animal-name").textContent = currentAnimal.name;
+      document.getElementById("animal-species").textContent = currentAnimal.species;
+      document.getElementById("animal-tag-code").textContent = `DATABASE ENTRY #${String(currentAnimal.id).padStart(4, "0")}`;
+      document.getElementById("animal-img").src = currentAnimal.image;
+      document.getElementById("stat-length").textContent = currentAnimal.length;
+      document.getElementById("stat-weight").textContent = currentAnimal.weight;
+      document.getElementById("stat-dist").textContent = currentAnimal.distance;
+
+      renderPingList();
+
+      if (typeof L !== "undefined") {
+        const latestCoords = currentAnimal.route[0].coords;
+        if (!currentMap) {
+          currentMap = L.map("map", { zoomControl: false }).setView(latestCoords, 6);
+          
+          L.tileLayer("https://maps.geoapify.com/v1/tile/dark-matter-purple/{z}/{x}/{y}.png?apiKey=" + BASEMAP_API_KEY, {
+            maxZoom: 20,
+            tileSize: 512,
+            zoomOffset: -1,
+            attribution: 'Powered by Geoapify | <a href="https://openstreetmap.org/copyright">&copy; OpenStreetMap contributors</a>'
+          }).addTo(currentMap);
+        } else {
+          currentMap.setView(latestCoords, 6);
+          currentMap.eachLayer(layer => {
+            if (layer instanceof L.Polyline || layer instanceof L.CircleMarker) {
+              currentMap.removeLayer(layer);
+            }
+          });
+        }
+
+        const latlngs = currentAnimal.route.map(p => p.coords);
+        livePolyline = L.polyline(latlngs, { color: "#00d4ff", weight: 3, dashArray: "6, 8" }).addTo(currentMap);
+
+        currentAnimal.route.forEach((ping, index) => {
+          const marker = L.circleMarker(ping.coords, {
+            radius: index === 0 ? 8 : 5,
+            fillColor: index === 0 ? "#00ff88" : "#ffffff",
+            color: "#07131f",
+            weight: 2,
+            fillOpacity: 1
+          }).addTo(currentMap);
+          marker.bindPopup(`<b>${ping.date}</b><br>${ping.loc}`);
+          if (index === 0) liveMarker = marker;
+        });
+
+        startLiveFeed();
+      }
+    }
+
+    function renderPingList() {
+      const pingList = document.getElementById("ping-list");
+      pingList.innerHTML = "";
+      currentAnimal.route.forEach((ping, index) => {
+        const div = document.createElement("div");
+        div.className = "ping-item";
+        div.innerHTML = `<span>${index === 0 ? "📍 " : ""}${ping.loc}</span><span class="ping-date">${ping.date}</span>`;
+        pingList.appendChild(div);
+      });
+    }
+
+    function startLiveFeed() {
+      let step = 0;
+      liveTimer = setInterval(() => {
+        if (!currentAnimal || !liveMarker) return;
+        step += 0.15;
+        
+        const baseLat = currentAnimal.route[0].coords[0];
+        const baseLon = currentAnimal.route[0].coords[1];
+        const newLat = baseLat + Math.sin(step) * 0.015;
+        const newLon = baseLon + Math.cos(step * 0.7) * 0.015;
+
+        const newCoords = [newLat, newLon];
+        liveMarker.setLatLng(newCoords);
+
+        const latDir = newLat >= 0 ? "N" : "S";
+        const lonDir = newLon >= 0 ? "E" : "W";
+        currentAnimal.route[0].coords = newCoords;
+        currentAnimal.route[0].loc = `${currentAnimal.zone.name} (${Math.abs(newLat).toFixed(2)}°${latDir}, ${Math.abs(newLon).toFixed(2)}°${lonDir})`;
+        
+        renderPingList();
+
+        const latlngs = currentAnimal.route.map(p => p.coords);
+    if (livePolyline) livePolyline.setLatLngs(latlngs);
+
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
